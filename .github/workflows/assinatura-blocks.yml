@@ -41,17 +41,25 @@ jobs:
           git config --global user.email "${{ secrets.GPG_KEY_EMAIL }}"
           git config --global commit.gpgsign true
           git config --global gpg.program gpg
-
+      
+          echo "use-agent" >> ~/.gnupg/gpg.conf
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          gpgconf --kill gpg-agent
+      
           git checkout main
           git pull origin main
-
-          git -c user.signingkey=${{ env.GPG_KEY_ID }} \
-              -c commit.gpgsign=true \
+      
+          echo "${{ secrets.GPG_PASSPHRASE }}" | \
+          gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+          --detach-sign --output signature.sig HEAD
+      
+          git -c commit.gpgsign=true \
               -c gpg.program="gpg" \
-              -c gpg.passphrase="${{ secrets.GPG_PASSPHRASE }}" \
+              -c gpg.openpgp.preset-passphrase="${{ secrets.GPG_PASSPHRASE }}" \
+              -c user.signingkey=${{ env.GPG_KEY_ID }} \
               merge --no-ff --signoff --gpg-sign=${{ env.GPG_KEY_ID }} HEAD@{1} -m "🔏 Merge assinado automático de ${GITHUB_REF##*/}"
-
+      
           git push origin main
         env:
-          GPG_KEY_ID: ${{ env.GPG_KEY_ID }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
