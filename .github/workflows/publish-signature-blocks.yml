@@ -37,7 +37,8 @@ jobs:
           # Verifica duplicação ignorando o timestamp final
           for NOVO_ARQ in $ARQUIVOS_BRANCH; do
             FILENAME=$(basename "$NOVO_ARQ")
-            PADRAO=$(echo "$FILENAME" | sed -E 's/doc_([a-zA-Z0-9]+)_([a-zA-Z0-9]+)_[0-9]{6}\.txt/doc_\1_\2.txt/')
+            #PADRAO=$(echo "$FILENAME" | sed -E 's/doc_([a-zA-Z0-9]+)_([a-zA-Z0-9]+)_[0-9]{6}\.txt/doc_\1_\2.txt/')
+            PADRAO=$(echo "$FILENAME" | sed -E 's/doc_([^_]+)_([^_]+)_[0-9]{6}\.txt/doc_\1_\2.txt/')
 
             echo "🔍 Procurando duplicata de $PADRAO"
 
