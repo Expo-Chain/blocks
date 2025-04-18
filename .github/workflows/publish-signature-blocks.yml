@@ -23,30 +23,37 @@ jobs:
           git fetch origin main
           # Caminho base
           DATA=$(date -u +"%Y/%m/%d")
-          
+
           # Arquivos existentes na main
           git fetch origin main
           ARQUIVOS_EXISTENTES=$(git ls-tree --name-only origin/main:commits/signatures/$DATA)
-          
+
           # Arquivos criados/modificados nesta branch
           ARQUIVOS_BRANCH=$(git diff --name-only origin/main HEAD -- commits/signatures/$DATA)
-          
+
           echo "🧾 Arquivos novos: $ARQUIVOS_BRANCH"
           echo "🧾 Arquivos main: $ARQUIVOS_EXISTENTES"
-          
+
           # Verifica duplicação ignorando o timestamp final
           for NOVO_ARQ in $ARQUIVOS_BRANCH; do
             FILENAME=$(basename "$NOVO_ARQ")
             PADRAO=$(echo "$FILENAME" | sed -E 's/doc_([a-zA-Z0-9]+)_([a-zA-Z0-9]+)_[0-9]{6}\.txt/doc_\1_\2/')
-            
+
             echo "🔍 Procurando duplicata de $PADRAO"
-          
+
             if echo "$ARQUIVOS_EXISTENTES" | grep -q "$PADRAO"; then
               echo "❌ Conflito detectado: já existe $PADRAO na main"
+            
+              # 💥 Deleta a branch para evitar bloqueios futuros
+              BRANCH_NAME="${GITHUB_REF##*/}"
+              echo "🧹 Limpando branch com conflito: $BRANCH_NAME"
+              gh auth login --with-token <<< "${{ secrets.GH_PAT }}"
+              gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/$BRANCH_NAME"
+            
               exit 1
             fi
           done
-          
+
           echo "✅ Nenhum conflito detectado"
 
       - name: 🔐 Importar chave GPG
