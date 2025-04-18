@@ -87,6 +87,6 @@ jobs:
           git merge --no-ff --signoff -S HEAD@{1} -m "🔏 Merge assinado automático de ${GITHUB_REF##*/}"
           git log -1 --show-signature
 
-          git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }} main
+          git push origin main
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
