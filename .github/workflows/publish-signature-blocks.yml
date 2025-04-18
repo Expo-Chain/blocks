@@ -36,8 +36,11 @@ jobs:
           
           # Verifica duplicação ignorando o timestamp final
           for NOVO_ARQ in $ARQUIVOS_BRANCH; do
-            PADRAO=$(echo "$NOVO_ARQ" | sed -E 's/doc_([a-zA-Z0-9]+)_([a-zA-Z0-9]+)_[0-9]{6}\.txt/doc_\1_\2/')
+            FILENAME=$(basename "$NOVO_ARQ")
+            PADRAO=$(echo "$FILENAME" | sed -E 's/doc_([a-zA-Z0-9]+)_([a-zA-Z0-9]+)_[0-9]{6}\.txt/doc_\1_\2/')
+            
             echo "🔍 Procurando duplicata de $PADRAO"
+          
             if echo "$ARQUIVOS_EXISTENTES" | grep -q "$PADRAO"; then
               echo "❌ Conflito detectado: já existe $PADRAO na main"
               exit 1
