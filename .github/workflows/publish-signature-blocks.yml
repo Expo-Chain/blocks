@@ -81,7 +81,7 @@ jobs:
 
       - name: ✅ Assinar e fazer merge na main
         run: |
-          git config --global user.name "ExpoChain CI"
+          git config --global user.name "João Paulo Biesek de Oliveira"
           git config --global user.email "${{ secrets.GPG_KEY_EMAIL }}"
           git config --global commit.gpgsign true
           git config --global gpg.program gpg
