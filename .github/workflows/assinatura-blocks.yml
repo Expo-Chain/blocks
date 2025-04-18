@@ -20,8 +20,11 @@ jobs:
       - name: 📥 Importar chave GPG privada
         run: |
           mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
           echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --import
           echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          gpgconf --kill gpg-agent
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -31,8 +34,6 @@ jobs:
           KEY_ID=$(gpg --list-secret-keys --with-colons | grep '^sec' | cut -d':' -f5)
           echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
           git config --global user.signingkey "$KEY_ID"
-        env:
-          GPG_TTY: /dev/tty
 
       - name: ✅ Assinar e fazer merge na main
         run: |
@@ -47,6 +48,7 @@ jobs:
           git -c user.signingkey=${{ env.GPG_KEY_ID }} \
               -c commit.gpgsign=true \
               -c gpg.program="gpg" \
+              -c gpg.passphrase="${{ secrets.GPG_PASSPHRASE }}" \
               merge --no-ff --signoff --gpg-sign=${{ env.GPG_KEY_ID }} HEAD@{1} -m "🔏 Merge assinado automático de ${GITHUB_REF##*/}"
 
           git push origin main
