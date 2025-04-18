@@ -18,6 +18,27 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           set-safe-directory: true
 
+      - name: 🔍 Verificar duplicação no main
+        run: |
+          git fetch origin main
+          DATA=$(date -u +"%Y/%m/%d")
+          ARQUIVOS=$(git ls-tree --name-only origin/main:commits/signatures/$DATA)
+
+          echo "Arquivos existentes: $ARQUIVOS"
+
+          # Simulação da identificação dos dados
+          DOC_ID=$(echo "${GITHUB_REF##*/}" | cut -d'_' -f2)
+          USER_ID=$(echo "${GITHUB_REF##*/}" | cut -d'_' -f3)
+
+          echo "Verificando por doc_${DOC_ID}_${USER_ID} na pasta $DATA"
+
+          if echo "$ARQUIVOS" | grep -q "doc_${DOC_ID}_${USER_ID}"; then
+            echo "❌ Já existe um bloco assinado por este usuário neste documento na data de hoje!"
+            exit 1
+          fi
+          
+          echo "✅ Nenhum conflito detectado. Continuando..."
+
       - name: 🔐 Importar chave GPG
         run: |
           mkdir -p ~/.gnupg
