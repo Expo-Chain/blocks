@@ -71,6 +71,11 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
+      - name: 🛡️ Marcar chave como confiável
+        run: |
+          KEY_FPR=$(gpg --list-keys --with-colons | grep fpr | head -n 1 | cut -d':' -f10)
+          echo -e "5\ny\n" | gpg --command-fd 0 --expert --edit-key $KEY_FPR trust
+
       - name: 🔑 Definir chave de assinatura
         run: |
           KEY_ID=$(gpg --list-secret-keys --with-colons | grep '^sec' | cut -d':' -f5)
@@ -103,24 +108,23 @@ jobs:
           git config --global user.email "joaopaulobiesek@gmail.com"
           git config --global commit.gpgsign true
           git config --global gpg.program gpg
-      
+
           export GPG_TTY=$(tty)
           export GNUPGHOME="$HOME/.gnupg"
-      
+
           git checkout main
           git pull origin main
-      
+
           echo "$GPG_PASSPHRASE" | \
           gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
           --detach-sign -o /dev/null README.md || echo "ignorar assinatura direta"
-      
+
           git merge --no-ff --signoff --gpg-sign=$GPG_KEY_ID HEAD@{1} -m "🔏 Merge assinado automático de ${GITHUB_REF##*/}"
-      
+
           git log -1 --show-signature
           git verify-commit HEAD || (echo "❌ Assinatura ainda inválida!" && exit 1)
-      
+
           git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }} main
         env:
           GPG_KEY_ID: ${{ env.GPG_KEY_ID }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-      
