@@ -1,4 +1,4 @@
-name: 🔏 Merge Assinado de Bloco para Main
+name: 🖋️ Assinatura de documento
 
 on:
   push:
@@ -7,30 +7,21 @@ on:
 
 jobs:
   merge-assinado:
+    name: 🔐 Merge Assinado de Bloco para Main
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🧾 Checkout do repositório
+      - name: 🔄 Checkout do repositório
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GH_PAT }}
+          persist-credentials: false
 
-      - name: ⚙️ Configurar Git
-        run: |
-          git config --global user.name "ExpoChain CI"
-          git config --global user.email "${{ secrets.GPG_KEY_EMAIL }}"
-          git config --global commit.gpgsign true
-          git config --global gpg.program gpg
-
-      - name: 🔐 Importar chave GPG privada
+      - name: 📥 Importar chave GPG privada
         run: |
           mkdir -p ~/.gnupg
-          chmod 700 ~/.gnupg
-          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --import
           echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --import
-          gpgconf --kill gpg-agent
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -45,12 +36,14 @@ jobs:
 
       - name: ✅ Assinar e fazer merge na main
         run: |
+          git config --global user.name "ExpoChain CI"
+          git config --global user.email "${{ secrets.GPG_KEY_EMAIL }}"
+          git config --global commit.gpgsign true
+          git config --global gpg.program gpg
+
           git checkout main
           git pull origin main
-          GIT_COMMITTER_EMAIL="${{ secrets.GPG_KEY_EMAIL }}" \
-          GIT_COMMITTER_NAME="ExpoChain CI" \
-          GNUPGHOME="$HOME/.gnupg" \
-          GPG_TTY=$(tty) \
+
           git -c user.signingkey=${{ env.GPG_KEY_ID }} \
               -c commit.gpgsign=true \
               -c gpg.program="gpg" \
@@ -58,4 +51,5 @@ jobs:
 
           git push origin main
         env:
+          GPG_KEY_ID: ${{ env.GPG_KEY_ID }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
