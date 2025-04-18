@@ -7,56 +7,54 @@ on:
 
 jobs:
   merge-assinado:
-    name: 🔐 Merge Assinado de Bloco para Main
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🔄 Checkout do repositório
+      - name: 📥 Checkout do repositório
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: 📥 Importar chave GPG privada
+      - name: 🔐 Importar chave GPG
         run: |
           mkdir -p ~/.gnupg
           chmod 700 ~/.gnupg
           echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
           echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --pinentry-mode loopback --import
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --import
           gpgconf --kill gpg-agent
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
-      - name: 🔐 Definir chave de assinatura
-        id: signingkey
+      - name: 🔑 Definir chave de assinatura
         run: |
           KEY_ID=$(gpg --list-secret-keys --with-colons | grep '^sec' | cut -d':' -f5)
           echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
           git config --global user.signingkey "$KEY_ID"
+        env:
+          GPG_TTY: /dev/tty
 
       - name: ✅ Assinar e fazer merge na main
-        env:
-          GPG_KEY_ID: ${{ env.GPG_KEY_ID }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-          GPG_KEY_EMAIL: ${{ secrets.GPG_KEY_EMAIL }}
         run: |
           git config --global user.name "ExpoChain CI"
-          git config --global user.email "$GPG_KEY_EMAIL"
+          git config --global user.email "${{ secrets.GPG_KEY_EMAIL }}"
           git config --global commit.gpgsign true
           git config --global gpg.program gpg
 
           git checkout main
           git pull origin main
 
-          # O SEGREDO É ESTE WRAPPER:
-          echo "#!/bin/sh" > ~/gpg-wrapper.sh
-          echo "exec gpg --batch --yes --pinentry-mode loopback --passphrase \"\$GPG_PASSPHRASE\" \"\$@\"" >> ~/gpg-wrapper.sh
-          chmod +x ~/gpg-wrapper.sh
+          echo "${{ secrets.GPG_PASSPHRASE }}" | \
+          gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+          --detach-sign --output signature.sig HEAD
 
-          git -c gpg.program=~/gpg-wrapper.sh \
-              -c user.signingkey=$GPG_KEY_ID \
+          git -c user.signingkey=${{ env.GPG_KEY_ID }} \
               -c commit.gpgsign=true \
-              merge --no-ff --signoff --gpg-sign=$GPG_KEY_ID HEAD@{1} -m "🔏 Merge assinado automático de ${GITHUB_REF##*/}"
+              -c gpg.program="gpg" \
+              merge --no-ff --signoff --gpg-sign=${{ env.GPG_KEY_ID }} HEAD@{1} -m "🔏 Merge assinado automático de ${GITHUB_REF##*/}"
 
-          git push origin main
+          git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }} main
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
