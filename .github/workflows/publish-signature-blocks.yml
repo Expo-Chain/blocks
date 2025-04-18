@@ -88,6 +88,11 @@ jobs:
 
           git log --show-signature -1
           gpg --list-secret-keys --keyid-format LONG
+          gpg --list-keys --with-subkey-fingerprint --with-fingerprint
+          GIT_COMMIT=$(git rev-parse HEAD)
+          git verify-commit "$GIT_COMMIT"
+          git log -1 --format='%an <%ae>'
+
 
           export GPG_TTY=""
           export GNUPGHOME="$HOME/.gnupg"
@@ -108,3 +113,19 @@ jobs:
         env:
           GPG_KEY_ID: ${{ env.GPG_KEY_ID }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      - name: 🧪 Diagnóstico da Assinatura
+        run: |
+          echo "🔑 Verificando chave GPG..."
+          gpg --list-secret-keys --keyid-format LONG
+      
+          echo "🔍 Commit atual:"
+          git log -1 --format='%H %an <%ae>'
+          git log --show-signature -1
+      
+          echo "📌 Verificando assinatura do commit HEAD:"
+          git verify-commit HEAD || echo "⚠️ Assinatura inválida!"
+      
+          echo "📬 Verificando email do commit:"
+          git log -1 --format='%ae'
+      
+      
