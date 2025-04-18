@@ -1,0 +1,10 @@
+
+{
+  "documentId": "string",
+  "userId": "string",
+  "hash": "string",
+  "signedAt": "2025-04-18T18:43:43.4891670Z",
+  "ip": "191.191.191.191",
+  "userAgent": "Mozilla/5.0 ExpoChain Tester",
+  "validationId": "06361b6b-8325-4c8d-ad30-ac2e8e2abcf9"
+}
