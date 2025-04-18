@@ -43,13 +43,13 @@ jobs:
 
             if echo "$ARQUIVOS_EXISTENTES" | grep -q "$PADRAO"; then
               echo "❌ Conflito detectado: já existe $PADRAO na main"
-            
+
               # 💥 Deleta a branch para evitar bloqueios futuros
-              BRANCH_NAME="${GITHUB_REF##*/}"
+              BRANCH_NAME=$(echo "$GITHUB_REF" | sed 's|refs/heads/||')
               echo "🧹 Limpando branch com conflito: $BRANCH_NAME"
               gh auth login --with-token <<< "${{ secrets.GH_PAT }}"
-              gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/$BRANCH_NAME"
-            
+              gh api -X DELETE "repos/Expo-Chain/blocks/git/refs/heads/$BRANCH_NAME"
+
               exit 1
             fi
           done
