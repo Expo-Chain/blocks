@@ -103,35 +103,24 @@ jobs:
           git config --global user.email "joaopaulobiesek@gmail.com"
           git config --global commit.gpgsign true
           git config --global gpg.program gpg
-
-          git log --show-signature -1
-          gpg --list-secret-keys --keyid-format LONG
-          gpg --list-keys --with-subkey-fingerprint --with-fingerprint
-          GIT_COMMIT=$(git rev-parse HEAD)
-          git verify-commit "$GIT_COMMIT"
-          git log -1 --format='%an <%ae>'
-
-
-          export GPG_TTY=""
+      
+          export GPG_TTY=$(tty)
           export GNUPGHOME="$HOME/.gnupg"
-
+      
           git checkout main
           git pull origin main
-
+      
           echo "$GPG_PASSPHRASE" | \
           gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
           --detach-sign -o /dev/null README.md || echo "ignorar assinatura direta"
-
-          #git -c user.signingkey=$GPG_KEY_ID \
-          #    -c commit.gpgsign=true \
-          #    -c gpg.program="gpg" \
-          #    merge --no-ff --signoff --gpg-sign=$GPG_KEY_ID HEAD@{1} -m "🔏 Merge assinado automático de ${GITHUB_REF##*/}"
-
-          # Refaça o commit do merge manualmente assinado
+      
           git merge --no-ff --signoff --gpg-sign=$GPG_KEY_ID HEAD@{1} -m "🔏 Merge assinado automático de ${GITHUB_REF##*/}"
-
-
+      
+          git log -1 --show-signature
+          git verify-commit HEAD || (echo "❌ Assinatura ainda inválida!" && exit 1)
+      
           git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }} main
         env:
           GPG_KEY_ID: ${{ env.GPG_KEY_ID }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      
