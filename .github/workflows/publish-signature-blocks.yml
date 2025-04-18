@@ -86,6 +86,9 @@ jobs:
           git config --global commit.gpgsign true
           git config --global gpg.program gpg
 
+          git log --show-signature -1
+          gpg --list-secret-keys --keyid-format LONG
+
           export GPG_TTY=""
           export GNUPGHOME="$HOME/.gnupg"
 
