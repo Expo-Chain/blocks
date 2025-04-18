@@ -27,20 +27,35 @@ jobs:
         run: |
           mkdir -p ~/.gnupg
           chmod 700 ~/.gnupg
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
           echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
-          echo "pinentry-mode loopback" > ~/.gnupg/gpg.conf
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --import
           gpgconf --kill gpg-agent
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: 🔐 Definir chave de assinatura
+        run: |
+          KEY_ID=$(gpg --list-secret-keys --with-colons | grep '^sec' | cut -d':' -f5)
+          echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
+          git config --global user.signingkey "$KEY_ID"
+        env:
+          GPG_TTY: /dev/tty
 
       - name: ✅ Assinar e fazer merge na main
         run: |
           git checkout main
           git pull origin main
-          git merge --no-ff --signoff -m "🔏 Merge assinado automático de ${GITHUB_REF##*/}"
+          GIT_COMMITTER_EMAIL="${{ secrets.GPG_KEY_EMAIL }}" \
+          GIT_COMMITTER_NAME="ExpoChain CI" \
+          GNUPGHOME="$HOME/.gnupg" \
+          GPG_TTY=$(tty) \
+          git -c user.signingkey=${{ env.GPG_KEY_ID }} \
+              -c commit.gpgsign=true \
+              -c gpg.program="gpg" \
+              merge --no-ff --signoff --gpg-sign=${{ env.GPG_KEY_ID }} HEAD@{1} -m "🔏 Merge assinado automático de ${GITHUB_REF##*/}"
+
           git push origin main
         env:
-          GIT_COMMITTER_NAME: "ExpoChain CI"
-          GIT_COMMITTER_EMAIL: ${{ secrets.GPG_KEY_EMAIL }}
-          GPG_TTY: /dev/tty
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
