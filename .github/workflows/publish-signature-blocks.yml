@@ -20,7 +20,7 @@ on:
         required: true
 
 jobs:
-  sign-and-commit:
+  publish-signed-block:
     runs-on: ubuntu-latest
 
     steps:
@@ -31,6 +31,21 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.GITHUB_TOKEN }}
           set-safe-directory: true
+
+      - name: 🛡️ Verificar se o arquivo já existe
+        run: |
+          FILE_PATH="${{ github.event.inputs.file_path }}"
+          FILE_NAME=$(basename "$FILE_PATH")
+          FILE_PREFIX=$(echo "$FILE_NAME" | sed -E 's/(doc_[^_]+_[^_]+)_[0-9]{6}\.txt/\1/')
+
+          git fetch origin main
+          EXISTING=$(git ls-tree -r origin/main --name-only | grep "commits/signatures/" | grep "$FILE_PREFIX")
+
+          if [ -n "$EXISTING" ]; then
+            echo "⚠️ Já existe um arquivo com o mesmo padrão '$FILE_PREFIX'. Abortando."
+            echo "Arquivo encontrado: $EXISTING"
+            exit 1
+          fi
 
       - name: 🔐 Importar chave GPG com confiança
         run: |
