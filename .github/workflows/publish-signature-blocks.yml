@@ -1,0 +1,101 @@
+name: Publish Signed Block
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_message:
+        description: 'Mensagem do commit'
+        required: true
+      file_path:
+        description: 'Caminho do arquivo'
+        required: true
+      file_content:
+        description: 'Conteúdo do arquivo'
+        required: true
+      author_name:
+        description: 'Nome do autor'
+        required: true
+      author_email:
+        description: 'Email do autor'
+        required: true
+
+jobs:
+  sign-and-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          set-safe-directory: true
+
+      - name: 🔐 Importar chave GPG com confiança
+        run: |
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo "use-agent" >> ~/.gnupg/gpg.conf
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+
+          echo "$GPG_PRIVATE_KEY" | \
+            gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --import
+
+          # 🧠 Forçar confiança da chave
+          KEY_FPR=$(gpg --list-keys --with-colons | grep fpr | head -n 1 | cut -d':' -f10)
+          echo "$KEY_FPR:6:" | gpg --import-ownertrust
+
+          echo RELOADAGENT | gpg-connect-agent
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: 🔧 Configurar Git com chave de assinatura
+        run: |
+          export GPG_TTY=""
+          KEY_ID=$(gpg --list-secret-keys --with-colons | grep '^sec' | cut -d':' -f5)
+          echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
+
+          git config --global user.name "${{ github.event.inputs.author_name }}"
+          git config --global user.email "${{ github.event.inputs.author_email }}"
+          git config --global user.signingkey "$KEY_ID"
+          git config --global commit.gpgSign true
+          git config --global gpg.program gpg
+
+      - name: 📝 Criar arquivo com conteúdo
+        run: |
+          mkdir -p $(dirname "${{ github.event.inputs.file_path }}")
+          echo "${{ github.event.inputs.file_content }}" > "${{ github.event.inputs.file_path }}"
+
+      - name: ✅ Commit assinado
+        run: |
+          export GPG_TTY=$(tty)
+          echo "$GPG_PASSPHRASE" | \
+            gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --detach-sign --output .git/signature.gpg "${{ github.event.inputs.file_path }}"
+
+          git add "${{ github.event.inputs.file_path }}"
+          git commit -S -m "${{ github.event.inputs.commit_message }}"
+        env:
+          GPG_KEY_ID: ${{ env.GPG_KEY_ID }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: 🚀 Push para branch
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}
+          git push origin HEAD:refs/heads/feature/$(date +'%Y-%m-%d')
+      
+      - name: 📬 Criar Pull Request automático
+        run: |
+          BRANCH_NAME="feature/$(date +'%Y-%m-%d')"
+          
+          echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
+          
+          gh pr create \
+            --head "$BRANCH_NAME" \
+            --base main \
+            --title "${{ github.event.inputs.commit_message }}" \
+            --body "Merge automático da assinatura de \`${{ github.event.inputs.file_path }}\`"

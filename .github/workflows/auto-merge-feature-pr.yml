@@ -1,0 +1,26 @@
+name: 🤖 Auto Merge PR
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  auto-merge:
+    if: >
+      github.event.pull_request.user.login == 'joaopaulobiesek'
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: 🔐 Autenticar no GitHub CLI
+        run: echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
+
+      - name: 🧠 Verificar e dar merge no PR
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          gh pr merge $PR_NUMBER --auto --squash --delete-branch
