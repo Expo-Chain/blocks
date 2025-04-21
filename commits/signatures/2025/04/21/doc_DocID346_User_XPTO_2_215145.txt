@@ -1,0 +1,10 @@
+
+            {
+              documentId: DocID346,
+              userId: User_XPTO_2,
+              hash: HASH_019038472304809184038092408234,
+              signedAt: 2025-04-21T21:51:45.7762310Z,
+              ip: 191.191.191.191,
+              userAgent: Mozilla/5.0 ExpoChain Tester,
+              validationId: fd106456-e418-44ec-ad58-ebb7fa9da259
+            }
