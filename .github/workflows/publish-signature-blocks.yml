@@ -39,7 +39,7 @@ jobs:
           FILE_PREFIX=$(echo "$FILE_NAME" | sed -E 's/_[0-9]{6}\.txt$//')
 
           git fetch origin main
-          EXISTING=$(git ls-tree -r origin/main --name-only | grep "commits/signatures/" | grep "${FILE_PREFIX%.*}")
+          EXISTING=$(git ls-tree -r origin/main --name-only | grep "^commits/signatures/.*${FILE_PREFIX}_[0-9]\{6\}\.txt$" || true)
 
           if [ -n "$EXISTING" ]; then
             echo "⚠️ Já existe um arquivo com o mesmo padrão '$FILE_PREFIX'. Abortando."
