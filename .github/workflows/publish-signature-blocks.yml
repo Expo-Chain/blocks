@@ -36,7 +36,7 @@ jobs:
         run: |
           FILE_PATH="${{ github.event.inputs.file_path }}"
           FILE_NAME=$(basename "$FILE_PATH")
-          FILE_PREFIX=$(echo "$FILE_NAME" | sed -E 's/_[0-9]{6}\.txt$/.txt/')
+          FILE_PREFIX=$(echo "$FILE_NAME" | sed -E 's/_[0-9]{6}\.txt$//')
 
           git fetch origin main
           EXISTING=$(git ls-tree -r origin/main --name-only | grep "commits/signatures/" | grep "${FILE_PREFIX%.*}")
