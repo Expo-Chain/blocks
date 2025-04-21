@@ -36,10 +36,10 @@ jobs:
         run: |
           FILE_PATH="${{ github.event.inputs.file_path }}"
           FILE_NAME=$(basename "$FILE_PATH")
-          FILE_PREFIX=$(echo "$FILE_NAME" | sed -E 's/(doc_[^_]+_[^_]+)_[0-9]{6}\.txt/\1/')
+          FILE_PREFIX=$(echo "$FILE_NAME" | sed -E 's/_[0-9]{6}\.txt$/.txt/')
 
           git fetch origin main
-          EXISTING=$(git ls-tree -r origin/main --name-only | grep "commits/signatures/" | grep "$FILE_PREFIX")
+          EXISTING=$(git ls-tree -r origin/main --name-only | grep "commits/signatures/" | grep "${FILE_PREFIX%.*}")
 
           if [ -n "$EXISTING" ]; then
             echo "⚠️ Já existe um arquivo com o mesmo padrão '$FILE_PREFIX'. Abortando."
